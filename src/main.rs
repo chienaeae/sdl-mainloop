@@ -5,6 +5,7 @@ use std::time::{Duration, Instant};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::libc::can_err_mask_t;
+use sdl2::mouse::MouseButton;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
 use sdl2::render::{Texture, TextureCreator, WindowCanvas};
@@ -16,7 +17,7 @@ const NANO_SEC_PER_SEC: u128 = 1000000000;
 const UPDATE_TIMES_PER_SEC: u128 = 60;
 const UPDATE_TIMES_PER_NANO_SEC: u128 = NANO_SEC_PER_SEC / UPDATE_TIMES_PER_SEC;
 
-const WHITE: Color = Color::RGB(255,255,255);
+const WHITE: Color = Color::RGB(255, 255, 255);
 const GREEN: Color = Color::RGB(24, 181, 79);
 
 fn main() {
@@ -31,11 +32,17 @@ fn main() {
     let font = font_subsystem
         .load_font("assets/OpenSans-Semibold.ttf", 22)
         .unwrap();
+    let font2 = font_subsystem
+        .load_font("assets/OpenSans-Light.ttf", 15)
+        .unwrap();
+
+
     // For Event
     let mut event_pump = sdl.event_pump().unwrap();
     // For Render
     let mut canvas = window.into_canvas().build().unwrap();
     let texture_creator = canvas.texture_creator();
+
     let mut point = Point::new(0, 0);
     // For time loop
     let mut updated_counter: i128 = 0;
@@ -65,6 +72,9 @@ fn main() {
                     Event::KeyDown { keycode: Some(Keycode::Right), .. } => {
                         point = point.offset(4, 0);
                     }
+                    Event::MouseButtonUp { mouse_btn: MouseButton::Left, x, y, .. } => {
+                        println!("onClick position {:?}", Point::new(x, y));
+                    }
                     _ => {}
                 }
             }
@@ -77,11 +87,20 @@ fn main() {
             painted_counter = 0;
         }
 
+
         // Paint
+        let (o_width, o_height) = canvas.output_size().unwrap();
+
         render_bg(&mut canvas, WHITE);
         let text = format!("Time: {}(ms), FPS: {}", duration.as_secs(), current_fps);
-        render_text(&mut canvas, &texture_creator, &font, text.as_str(), Point::new(10, 10), GREEN);
-        render_rect(&mut canvas, point);
+        let (text_texture, width, height) = create_text_texture(&texture_creator, &font, GREEN, text.as_str());
+        render_text(&mut canvas, &text_texture, width, height, Point::new(0,0));
+
+        render(&mut canvas, Color::RGB(0, 0, 0), point + Point::new(o_width as i32 / 2, o_height as i32 / 2));
+        let text = format!("(x: {}, y: {})", point.x(), point.y());
+        let (text_texture, width, height) = create_text_texture(&texture_creator, &font, GREEN, text.as_str());
+        render_text(&mut canvas, &text_texture, width, height, point.offset(o_width as i32 / 2 - 50, o_height as i32 / 2 + 50));
+
         canvas.present();
         painted_counter += 1;
         ::std::thread::sleep(Duration::new(0, UPDATE_TIMES_PER_NANO_SEC as u32));
@@ -90,20 +109,18 @@ fn main() {
 
 fn render_bg(
     canvas: &mut WindowCanvas,
-    color: Color
-){
+    color: Color,
+) {
     canvas.set_draw_color(color);
     canvas.clear();
 }
 
-fn render_text(
-    canvas: &mut WindowCanvas,
-    texture_creator: &TextureCreator<WindowContext>,
+fn create_text_texture<'a>(
+    texture_creator: &'a TextureCreator<WindowContext>,
     font: &Font,
+    color: Color,
     text: &str,
-    position: Point,
-    color: Color
-) {
+) -> (Texture<'a>, u32, u32) {
     let font_render_surface = font
         .render(&text)
         .blended(color)
@@ -111,17 +128,23 @@ fn render_text(
     let width = font_render_surface.width();
     let height = font_render_surface.height();
     let font_texture = font_render_surface.as_texture(&texture_creator).unwrap();
-    canvas.set_draw_color(color);
-    canvas.copy(&font_texture, None, Rect::from_center(position + Point::new(width as i32 / 2, height as i32 / 2), width, height));
+    (font_texture, width, height)
 }
 
-
-fn render_rect(
+fn render(
     canvas: &mut WindowCanvas,
-    point: Point
-) {
-    let (width, height) = canvas.output_size().unwrap();
-    canvas.set_draw_color(Color::RGB(0, 0, 0));
-    let p = point.offset(50, 50);
-    canvas.fill_rect(Rect::from_center(p + Point::new(width as i32 / 2, height as i32 / 2), 100, 100));
+    color: Color,
+    position: Point) {
+    canvas.set_draw_color(color);
+    canvas.fill_rect(Rect::from_center(position, 100, 100));
+}
+
+fn render_text(
+    canvas: &mut WindowCanvas,
+    texture: &Texture,
+    texture_width: u32,
+    texture_height: u32,
+    position: Point) {
+    let render_pos = position.offset(texture_width as i32 / 2, texture_height as i32 / 2);
+    canvas.copy(&texture,None, Rect::from_center(render_pos, texture_width, texture_height));
 }
