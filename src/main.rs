@@ -1,4 +1,5 @@
 extern crate sdl2;
+extern crate gl;
 
 use std::time::{Duration, Instant};
 
@@ -11,7 +12,10 @@ use sdl2::rect::{Point, Rect};
 use sdl2::render::{Texture, TextureCreator, WindowCanvas};
 use sdl2::surface::Surface;
 use sdl2::ttf::{self, Font};
+use sdl2::gfx::{self};
+use sdl2::gfx::primitives::DrawRenderer;
 use sdl2::video::WindowContext;
+use gl::*;
 
 const NANO_SEC_PER_SEC: u128 = 1000000000;
 const UPDATE_TIMES_PER_SEC: u128 = 60;
@@ -31,9 +35,6 @@ fn main() {
         .unwrap();
     let font = font_subsystem
         .load_font("assets/OpenSans-Semibold.ttf", 22)
-        .unwrap();
-    let font2 = font_subsystem
-        .load_font("assets/OpenSans-Light.ttf", 15)
         .unwrap();
 
 
@@ -72,8 +73,8 @@ fn main() {
                     Event::KeyDown { keycode: Some(Keycode::Right), .. } => {
                         point = point.offset(4, 0);
                     }
-                    Event::MouseButtonUp { mouse_btn: MouseButton::Left, x, y, .. } => {
-                        println!("onClick position {:?}", Point::new(x, y));
+                    Event::MouseMotion { x, y, .. } => {
+                        println!("motion on 0{:?}", Point::new(x, y));
                     }
                     _ => {}
                 }
@@ -87,10 +88,8 @@ fn main() {
             painted_counter = 0;
         }
 
-
         // Paint
         let (o_width, o_height) = canvas.output_size().unwrap();
-
         render_bg(&mut canvas, WHITE);
         let text = format!("Time: {}(ms), FPS: {}", duration.as_secs(), current_fps);
         let (text_texture, width, height) = create_text_texture(&texture_creator, &font, GREEN, text.as_str());
@@ -100,7 +99,6 @@ fn main() {
         let text = format!("(x: {}, y: {})", point.x(), point.y());
         let (text_texture, width, height) = create_text_texture(&texture_creator, &font, GREEN, text.as_str());
         render_text(&mut canvas, &text_texture, width, height, point.offset(o_width as i32 / 2 - 50, o_height as i32 / 2 + 50));
-
         canvas.present();
         painted_counter += 1;
         ::std::thread::sleep(Duration::new(0, UPDATE_TIMES_PER_NANO_SEC as u32));

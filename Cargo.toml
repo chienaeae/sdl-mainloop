@@ -8,8 +8,9 @@ edition = "2021"
 [dependencies]
 specs = "0.17.0"
 specs-derive = "0.4.1"
+gl = "0.14.0"
 
 [dependencies.sdl2]
 version = "0.35.1"
 default-features = false
-features = ["image", "ttf"]
+features = ["image", "ttf", "gfx"]
